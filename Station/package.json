@@ -2,8 +2,8 @@
   "license": "MIT",
   "dependencies": {
     "blessed": "^0.1.81",
-    "express": "^4.16.2",
+    "express": "^4.16.3",
     "johnny-five": "^0.15.0",
-    "socket.io": "^2.0.4"
+    "socket.io": "^2.1.1"
   }
 }
