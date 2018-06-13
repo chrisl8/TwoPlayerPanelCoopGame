@@ -11,15 +11,20 @@ done
 SCRIPTDIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 # echo ${SCRIPTDIR} # For debugging
 
+which node > /dev/null
+if [ ! $? -eq 0 ]
+then
+    echo "You must install Node.js to run this."
+    echo "See https://nodejs.org/"
+    exit 1
+fi
+
 cd ${SCRIPTDIR}/Station
 
-# TODO: Add code to check for Node, and for node_modules and do an npm install.
-
-# Make the screen font BIG in the terminal
-setfont /usr/share/consolefonts/Uni3-Terminus32x16.psf.gz
-
-# Disable screen blanking in terminal
-# https://www.raspberrypi.org/forums/viewtopic.php?t=7810
-sudo sh -c "TERM=linux setterm -blank 0 >/dev/tty0"
+if [ ! -d "node_modules" ]; then
+  npm install
+fi
 
 node index.js
+
+cd ${SCRIPTDIR}
