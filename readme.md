@@ -1,6 +1,7 @@
 # Push The Button
 
 Game created for the 2018 Winter ICT Game Jam.
+This branch marks the state of the repository at the end of the 2018 Winter ICT Game Jam.
 
 This game is a physical game, in that it is built with an Arduino and lots of buttons and switches.
 You won't really be able to play it without building something.
