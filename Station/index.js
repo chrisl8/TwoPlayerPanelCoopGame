@@ -1,31 +1,13 @@
-const webPort = 3000;
-
 const five = require('johnny-five');
-const blessed = require('blessed');
-const express = require('express');
 const { spawn } = require('child_process');
 
 const stationList = require('./stationList');
+const gameState = require('./gameState');
+const settings = require('./settings');
+const webServer = require('./webServer');
+const display = require('./display');
 
-const gameState = {
-  atGameIntro: true,
-  gameStarted: false,
-  gameOver: false,
-  boardInitiated: false,
-  waitingForInput: false,
-  nextInstructionForSide1: 1,
-  nextInstructionForSide2: 1,
-  requiredKnobPosition1: null,
-  requiredKnobPosition2: null,
-  score: 0,
-  lastThreeInputs: [0, 0, 0],
-  timeElapsed: 0,
-  initialTIme: 10,
-  maxTime: 10,
-  clockUpdate: 0,
-};
-
-const loopTime = 10;
+webServer();
 
 // Dump Station data
 // for (let i = 0; i < stationList.length; i++) {
@@ -34,80 +16,13 @@ const loopTime = 10;
 //     })
 // }
 
-const screen = blessed.screen({
-  smartCSR: true,
-});
-// The boxes must not be defined before declaring a screen.
-const screenBoxes = require('./screenBoxes');
-
-screen.title = 'Push the Button!';
-
-// Append our box to the screen.
-screen.append(screenBoxes.topBox);
-screen.append(screenBoxes.introductionBox);
-
-screenBoxes.introductionBox.setContent(
-  '{center}Booting Universe, please stand by . . .',
-);
-
-// Quit on Escape, q, or Control-C.
-screen.key(['escape', 'q', 'C-c'], () => process.exit(0));
-
-// Render the screen.
-screen.render();
-
-const app = express();
-
-// Add headers
-app.use((req, res, next) => {
-  // Website you wish to allow to connect
-  res.setHeader('Access-Control-Allow-Origin', '*');
-
-  // Request methods you wish to allow
-  res.setHeader(
-    'Access-Control-Allow-Methods',
-    'GET, POST, OPTIONS, PUT, PATCH, DELETE',
-  );
-
-  // Request headers you wish to allow
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-Requested-With,content-type',
-  );
-
-  // Set to true if you need the website to include cookies in the requests sent
-  // to the API (e.g. in case you use sessions)
-  res.setHeader('Access-Control-Allow-Credentials', true);
-
-  // Pass to next layer of middleware
-  next();
-});
-
-app.listen(webPort);
-// with Sockets?
-// const webServer = app.listen(webPort);
-// const socket = require('socket.io').listen(webServer);
-
-// If no path is given, return files from parent folder (in lieu of what I usually put in 'public')
-// This will allow the web site to run from this process too.
-app.use(express.static(`${__dirname}/../`));
-
-app.get('/stations', (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  const dataToSend = {
-    buttonState: stationList,
-    score: gameState.score,
-    timeRemaining:
-      gameState.maxTime * (1000 / loopTime) - gameState.timeElapsed,
-  };
-  res.send(JSON.stringify(dataToSend));
-});
+display.initialize();
 
 // Johnny Five section
 // TODO: Set up all Johnny Five devices and set them to update the stationList objects.
 const board = new five.Board({
-  repl: false, // IF ou don't want the REPL to display, because maybe you are doing something else on the terminal, turn it off this way.
-  debug: false, // Same for the "debug" messages like board Found and Connected.
+  // repl: false, // IF ou don't want the REPL to display, because maybe you are doing something else on the terminal, turn it off this way.
+  // debug: false, // Same for the "debug" messages like board Found and Connected.
 });
 
 // http://johnny-five.io/api/button/
@@ -115,6 +30,11 @@ const board = new five.Board({
 const johnnyFiveObjects = {};
 
 board.on('ready', () => {
+  // TODO: If we name the FILE we load to each Arduino differently,
+  // then we can use THIS below to differentiate them, regardless of what port each is plugged in to or initializes first.
+  // https://stackoverflow.com/a/34713418/4982408
+  console.log(board.io.firmware.name);
+
   johnnyFiveObjects.digitalReadout2 = new five.Led.Digits({
     controller: 'HT16K33',
   });
@@ -250,7 +170,7 @@ function pad(num, size) {
 function updateDigitalReadout() {
   if (gameState.clockUpdate > 5) {
     const output = pad(
-      gameState.maxTime * (1000 / loopTime) - gameState.timeElapsed,
+      gameState.maxTime * (1000 / settings.loopTime) - gameState.timeElapsed,
       4,
     );
     johnnyFiveObjects.digitalReadout1.print(output);
@@ -265,63 +185,19 @@ function primaryGameLoop() {
   if (gameState.boardInitiated) {
     if (gameState.atGameIntro) {
       updateDigitalReadout();
-      screen.append(screenBoxes.introductionBox);
-      screenBoxes.introductionBox.setContent(
-        'In the Twenty-Fourth and a Halfth Century humanity has expanded across the galaxy. There are many special people with heroic tasks to accomplish. There are also a lot of mundane tasks that we thought robots would be doing by now, but the the robots have better things to do . . . or perhaps you are a robot, that is also a possibility.\n' +
-          'You have one job: push the button . . . buttons . . . and turn the knobs and flip the switches.\n\n' +
-          'Arm both stations to begin!',
-      );
-      if (stationList[0][0].currentStatus !== 'on') {
-        screenBoxes.waitingToArm1box.setContent(
-          '{center}Waiting for Station 1 to Arm.{/center}',
-        );
-        screen.append(screenBoxes.waitingToArm1box);
-      } else {
-        screen.remove(screenBoxes.waitingToArm1box);
-      }
-      if (stationList[1][0].currentStatus !== 'on') {
-        screenBoxes.waitingToArm2box.setContent(
-          '{center}Waiting for Station 2 to Arm.{/center}',
-        );
-        screen.append(screenBoxes.waitingToArm2box);
-      } else {
-        screen.remove(screenBoxes.waitingToArm2box);
-      }
+      display.update({ state: 'intro' });
       if (
         stationList[0][0].currentStatus === 'on' &&
         stationList[1][0].currentStatus === 'on'
       ) {
         gameState.atGameIntro = false;
       }
-      screen.render();
     } else if (!gameState.gameStarted) {
       gameState.score = 0;
-      screen.remove(screenBoxes.introductionBox);
-      screen.append(screenBoxes.commandBox);
-      screenBoxes.commandBox.setContent('{center}Get ready!{/center}');
-      screen.render();
+      display.update({ state: 'notStarted' });
       gameState.gameStarted = true;
     } else if (gameState.gameOver) {
-      if (stationList[0][0].currentStatus !== 'off') {
-        screenBoxes.waitingToArm1box.setContent(
-          '{center}Waiting for Station 1 to DISARM.{/center}',
-        );
-        screen.append(screenBoxes.waitingToArm1box);
-        screen.render();
-      } else {
-        screen.remove(screenBoxes.waitingToArm1box);
-        screen.render();
-      }
-      if (stationList[1][0].currentStatus !== 'off') {
-        screenBoxes.waitingToArm2box.setContent(
-          '{center}Waiting for Station 2 to DISARM.{/center}',
-        );
-        screen.append(screenBoxes.waitingToArm2box);
-        screen.render();
-      } else {
-        screen.remove(screenBoxes.waitingToArm2box);
-        screen.render();
-      }
+      display.update({ state: 'gameOver', data: { score: gameState.score } });
       if (
         stationList[0][0].currentStatus === 'off' &&
         stationList[1][0].currentStatus === 'off'
@@ -333,23 +209,12 @@ function primaryGameLoop() {
         gameState.waitingForInput = false;
         gameState.gameStarted = false;
         gameState.atGameIntro = true;
-        screen.remove(screenBoxes.commandBox);
-        screen.render();
-      } else {
-        screenBoxes.commandBox.setContent(`GAME OVER!\n
-            \n\nYOUR SCORE: ${gameState.score}
-            \n\nYou had ONE BUTTON (or switch . . . or knob . . .) to push, but you failed . . .
-            \n\nPlease DISARM both Stations to try again.
-            `);
-        screen.render();
       }
     } else if (
-      gameState.maxTime * (1000 / loopTime) - gameState.timeElapsed <
+      gameState.maxTime * (1000 / settings.loopTime) - gameState.timeElapsed <
       1
     ) {
-      screen.remove(screenBoxes.leftBottomBox);
-      screen.remove(screenBoxes.rightBottomBox);
-      screen.render();
+      display.update({ state: 'maxTimeReached' });
       johnnyFiveObjects.digitalReadout1.print('0000');
       johnnyFiveObjects.digitalReadout2.print('0000');
       gameState.gameOver = true;
@@ -400,15 +265,8 @@ function primaryGameLoop() {
       } else {
         gameState.timeElapsed++;
       }
-      screen.append(screenBoxes.leftBottomBox);
       updateDigitalReadout();
-      screenBoxes.leftBottomBox.setContent(
-        `Time Left: ${gameState.maxTime * (1000 / loopTime) -
-          gameState.timeElapsed}`,
-      );
-      screen.append(screenBoxes.rightBottomBox);
-      screenBoxes.rightBottomBox.setContent(`SCORE: ${gameState.score}`);
-      screen.render();
+      display.update({ state: 'waitingForInput', data: gameState });
     } else if (!gameState.waitingForInput && !gameState.gameOver) {
       // Clear all inputs
       for (let i = 0; i < stationList.length; i++) {
@@ -498,33 +356,16 @@ function primaryGameLoop() {
           gameState.requiredKnobPosition2 = knobDirection;
         }
       }
-      screenBoxes.commandBox.setContent(`\n${displayNameForStation1}\n
-            \n
-            and
-            \n
-            \n${displayNameForStation2}`);
-      screen.render();
+      display.update({
+        state: 'generatingNextCommand',
+        data: { displayNameForStation1, displayNameForStation2 },
+      });
       gameState.waitingForInput = true;
     } else {
-      screenBoxes.commandBox.setContent(
-        `ERROR: Universe has crashed, please reboot it . . .`,
-      );
-      screen.render();
+      display.update({ state: 'crash' });
     }
-
-    // Are we at the intro or in the game?
-
-    // Is the game over?
-
-    // Are we waiting for input?
-
-    // Is the input good?
-
-    // Update score.
-
-    // Update digits "timer" "clock"
   }
-  setTimeout(primaryGameLoop, loopTime);
+  setTimeout(primaryGameLoop, settings.loopTime);
 }
 
 primaryGameLoop();
