@@ -21,6 +21,7 @@ display.initialize();
 // Johnny Five section
 // TODO: Set up all Johnny Five devices and set them to update the stationList objects.
 const board = new five.Board({
+  port: '/dev/ttyACM0',
   // repl: false, // IF ou don't want the REPL to display, because maybe you are doing something else on the terminal, turn it off this way.
   // debug: false, // Same for the "debug" messages like board Found and Connected.
 });
