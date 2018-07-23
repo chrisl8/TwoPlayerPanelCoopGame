@@ -22,7 +22,7 @@ display.initialize();
 // TODO: Set up all Johnny Five devices and set them to update the stationList objects.
 const board = new five.Board({
   port: '/dev/ttyACM0',
-  // repl: false, // IF ou don't want the REPL to display, because maybe you are doing something else on the terminal, turn it off this way.
+  // repl: false, // IF you don't want the REPL to display, because maybe you are doing something else on the terminal, turn it off this way.
   // debug: false, // Same for the "debug" messages like board Found and Connected.
 });
 
@@ -71,6 +71,10 @@ board.on('ready', () => {
             if (input.subType === 'arm') {
               soundName = '369867__samsterbirdies__radio-beep';
             }
+            if (settings.debug) {
+              console.log(`\nStation ${i + 1}`);
+              console.log(input);
+            }
             spawn('aplay', [`sounds/${soundName}.wav`]);
           },
         );
@@ -99,7 +103,7 @@ board.on('ready', () => {
           `${i}-${input.type}-${input.subType}-${input.id}`
         ] = new five.Sensor({
           pin: input.pin,
-          threshold: 1, // This will emit a 'change' if it changes by this much.
+          threshold: settings.potChangeThreshold, // This will emit a 'change' if it changes by this much.
           // freq: 250 // This will emit data every x milliseconds, even if no change has occured.
         });
 
@@ -122,11 +126,17 @@ board.on('ready', () => {
           function() {
             input.hasBeenPressed = true;
             input.currentStatus = this.value;
+            if (settings.debug) {
+              console.log(`\nStation ${i + 1}`);
+              console.log(input);
+            }
             // console.log(input);
           },
         );
       }
-      // console.log(`Station ${i} input ${input.id} is ${input.label}.`);
+      if (settings.debug) {
+        console.log(`Station ${i} input ${input.id} is ${input.label}.`);
+      }
     });
   }
 

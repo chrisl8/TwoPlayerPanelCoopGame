@@ -19,12 +19,35 @@ then
     exit 1
 fi
 
+while test $# -gt 0
+do
+        case "$1" in
+                --service) RUN_AS_SERVICE=true
+                ;;
+        *) echo "Invalid argument"
+        exit
+        ;;
+        esac
+        shift
+done
+
 cd ${SCRIPTDIR}/Station
 
 if [ ! -d "node_modules" ]; then
   npm install
+else
+  npm update
 fi
 
-node index.js
-
+if test "${RUN_AS_SERVICE}" == "true"; then
+  ${SCRIPTDIR}/Station/node_modules/pm2/bin/pm2 start ${SCRIPTDIR}/Station/pm2Config.json
+  echo "To see the logs run:"
+  echo "${SCRIPTDIR}/Station/node_modules/pm2/bin/pm2 logs"
+  echo "To stop the program run:"
+  echo "${SCRIPTDIR}/Station/node_modules/pm2/bin/pm2 stop Game"
+  echo "To restart the game (with new code for example) run:"
+  echo "${SCRIPTDIR}/Station/node_modules/pm2/bin/pm2 restart Game"
+else
+  node index.js
+fi
 cd ${SCRIPTDIR}

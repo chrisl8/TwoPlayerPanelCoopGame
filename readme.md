@@ -50,3 +50,17 @@ $ ./startGame.sh
 ```
 
 It will initialize the node_modules folder on the first run.
+
+
+NOTES:
+
+Pins 6 & 7 are the lowest two pins I can seem to use the ARM switches on.
+I'm not sure what is up with pins 0 to 5. Need to look that up.
+
+Potentiometers must be powered with FIVE volts from Arduino, not the 3.3v line.
+
+To use Analog pins as Digital, use a number by adding the next pin up (54) to the A number.
+
+Using pins:
+Switches: 32-53
+Small Buttons: 2-5, 8-13, 22-31

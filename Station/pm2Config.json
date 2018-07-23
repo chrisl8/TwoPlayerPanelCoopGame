@@ -1,0 +1,9 @@
+{
+  "apps": [
+    {
+      "name": "Game",
+      "script": "index.js",
+      "restart_delay": 1000
+    }
+  ]
+}
