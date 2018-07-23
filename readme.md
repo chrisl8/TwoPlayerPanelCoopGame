@@ -51,8 +51,33 @@ $ ./startGame.sh
 
 It will initialize the node_modules folder on the first run.
 
+### Version 1.0 Improvements:
+    * Better box with fancy metalic looking paint.
+    * Character Displays on board so you don't have to look up at a monitor/TV to get your directions.
+    * 10 buttons per side instead of 5
+    * 11 switches per side instead of 5
+    * More "randomized" pattern for layout
+    * Lots of playability improvements in the code, but the game play logic is still the same.
+        * Positive "SUCCESS" confirmation when you perform your task before your team mate does.
+        * Knobs register when they leave the correct zone before your team mate performs their command
 
-NOTES:
+### Future Enhancements
+    * Lights on the switches and the knobs
+        * That is what the extra holes are for.
+    * Integrated speakers
+        * Now you have to plug in an external set of speakers if you want sound
+        * Sound is not required to play the game.
+    * Improved text and "interactivity" from system as you do things.
+    * Alternate game modes
+        * Self driven Demo mode that just flasehs lights
+        * User driven demo mode where it just makes sounds and flashes lights when you push buttons an dturn knows.
+        * Use lights to "signal" which thing to switch when time runs short.
+        * Mode with no commands, just lights to say "push this"
+        * Single player mode
+        * Competitive mode?
+            * Not really sure how to do this.
+
+### NOTES:
 
 Pins 6 & 7 are the lowest two pins I can seem to use the ARM switches on.
 I'm not sure what is up with pins 0 to 5. Need to look that up.
