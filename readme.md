@@ -64,3 +64,6 @@ To use Analog pins as Digital, use a number by adding the next pin up (54) to th
 Using pins:
 Switches: 32-53
 Small Buttons: 2-5, 8-13, 22-31
+
+Adding to crontab on pi
+`@reboot ${HOME}/TwoPlayerPanelCoopGame/startGame.sh --service > ${HOME}/crontab.log 2>&1`

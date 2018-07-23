@@ -11,6 +11,12 @@ done
 SCRIPTDIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 # echo ${SCRIPTDIR} # For debugging
 
+if [ -d ${HOME}/.nvm ]; then
+  export NVM_DIR="$HOME/.nvm"
+  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+  [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+fi
+
 which node > /dev/null
 if [ ! $? -eq 0 ]
 then
@@ -24,6 +30,8 @@ do
         case "$1" in
                 --service) RUN_AS_SERVICE=true
                 ;;
+                --update) UPDATE_MODULES=true
+                ;;
         *) echo "Invalid argument"
         exit
         ;;
@@ -36,7 +44,9 @@ cd ${SCRIPTDIR}/Station
 if [ ! -d "node_modules" ]; then
   npm install
 else
-  npm update
+  if test "${UPDATE_MODULES}" == "true"; then
+    npm update
+  fi
 fi
 
 if test "${RUN_AS_SERVICE}" == "true"; then

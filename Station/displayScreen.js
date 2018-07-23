@@ -101,6 +101,8 @@ function update({ state, data }) {
       screen.remove(screenBoxes.leftBottomBox);
       screen.remove(screenBoxes.rightBottomBox);
       break;
+    case 'player1done':
+    case 'player2done':
     case 'waitingForInput':
       screen.append(screenBoxes.leftBottomBox);
       screenBoxes.leftBottomBox.setContent(

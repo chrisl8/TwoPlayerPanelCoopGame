@@ -4,10 +4,10 @@ const { spawn } = require('child_process');
 const stationList = require('./stationList');
 const gameState = require('./gameState');
 const settings = require('./settings');
-const webServer = require('./webServer');
+// const webServer = require('./webServer');
 const display = require('./display');
 
-webServer();
+// webServer();
 
 // Dump Station data
 // for (let i = 0; i < stationList.length; i++) {
@@ -22,8 +22,8 @@ display.initialize();
 // TODO: Set up all Johnny Five devices and set them to update the stationList objects.
 const board = new five.Board({
   port: '/dev/ttyACM0',
-  // repl: false, // IF you don't want the REPL to display, because maybe you are doing something else on the terminal, turn it off this way.
-  // debug: false, // Same for the "debug" messages like board Found and Connected.
+  repl: settings.johnnyFiveRepl, // IF you don't want the REPL to display, because maybe you are doing something else on the terminal, turn it off this way.
+  debug: settings.johnnyFiveDebug, // Same for the "debug" messages like board Found and Connected.
 });
 
 // http://johnny-five.io/api/button/
@@ -34,7 +34,8 @@ board.on('ready', () => {
   // TODO: If we name the FILE we load to each Arduino differently,
   // then we can use THIS below to differentiate them, regardless of what port each is plugged in to or initializes first.
   // https://stackoverflow.com/a/34713418/4982408
-  console.log(board.io.firmware.name);
+  // console.log(board.io.firmware.name);
+  // TODO: Do we need the node-pixel firmata on both boards?
 
   johnnyFiveObjects.digitalReadout2 = new five.Led.Digits({
     controller: 'HT16K33',
@@ -135,6 +136,7 @@ board.on('ready', () => {
         );
       }
       if (settings.debug) {
+        // This prints out all button/switch labels at the start of the program.
         console.log(`Station ${i} input ${input.id} is ${input.label}.`);
       }
     });
@@ -148,6 +150,9 @@ function getRandomInt(min, max) {
 }
 
 function getRange(int) {
+  // TODO: Remove or narrow down so it doesn't confuse people when program thinks it is 'down' and user thinks it is 'left/right'
+  // TODO: Might need to set debugging on to test the positions.
+  // TODO: Can you get "in between"?
   const ranges = {
     down: { less: 10, greater: 950 },
     left: { less: 950, greater: 600 },
@@ -167,7 +172,7 @@ function getRange(int) {
 }
 
 function getRandVector() {
-  const possibleVectors = ['up', 'down', 'left', 'right'];
+  const possibleVectors = ['up', 'left', 'right'];
   const rand = Math.floor(Math.random() * possibleVectors.length);
   return possibleVectors[rand];
 }
@@ -218,6 +223,8 @@ function primaryGameLoop() {
         gameState.maxTime = gameState.initialTIme;
         gameState.score = 0;
         gameState.waitingForInput = false;
+        gameState.player1done = false;
+        gameState.player2done = false;
         gameState.gameStarted = false;
         gameState.atGameIntro = true;
       }
@@ -230,41 +237,70 @@ function primaryGameLoop() {
       johnnyFiveObjects.digitalReadout2.print('0000');
       gameState.gameOver = true;
     } else if (gameState.waitingForInput) {
-      let done = true;
+      let done = false;
+      let player1done =
+        stationList[0][gameState.nextInstructionForSide1].hasBeenPressed;
+      let player2done =
+        stationList[1][gameState.nextInstructionForSide2].hasBeenPressed;
+
       if (
-        stationList[0][gameState.nextInstructionForSide1].hasBeenPressed &&
-        stationList[1][gameState.nextInstructionForSide2].hasBeenPressed
+        player1done &&
+        stationList[0][gameState.nextInstructionForSide1].type === 'knob'
       ) {
-        const soundName = '328120__kianda__powerup';
-        if (stationList[0][gameState.nextInstructionForSide1].type === 'knob') {
-          if (
-            getRange(
-              stationList[0][gameState.nextInstructionForSide1].currentStatus,
-            ) !== gameState.requiredKnobPosition1
-          ) {
-            done = false;
-          } else {
-            spawn('aplay', [`sounds/${soundName}.wav`]);
-          }
+        if (
+          getRange(
+            stationList[0][gameState.nextInstructionForSide1].currentStatus,
+          ) !== gameState.requiredKnobPosition1
+        ) {
+          player1done = false;
         }
+      }
+
+      if (
+        player2done &&
+        stationList[1][gameState.nextInstructionForSide2].type === 'knob'
+      ) {
         if (stationList[1][gameState.nextInstructionForSide2].type === 'knob') {
           if (
             getRange(
               stationList[1][gameState.nextInstructionForSide2].currentStatus,
             ) !== gameState.requiredKnobPosition2
           ) {
-            done = false;
-          } else {
-            spawn('aplay', [`sounds/${soundName}.wav`]);
+            player2done = false;
           }
         }
-      } else {
-        done = false;
       }
+
+      if (player1done !== gameState.player1done) {
+        gameState.player1done = player1done;
+        if (player1done) {
+          spawn('aplay', [`sounds/${settings.successSoundName}.wav`]);
+        } else {
+          // Display command again if the "player done" goes from true to false again.
+          display.update({ state: 'generatingNextCommand' });
+        }
+      }
+
+      if (player2done !== gameState.player2done) {
+        gameState.player2done = player2done;
+        if (player2done) {
+          spawn('aplay', [`sounds/${settings.successSoundName}.wav`]);
+        } else {
+          // Display command again if the "player done" goes from true to false again.
+          display.update({ state: 'generatingNextCommand' });
+        }
+      }
+
+      if (player1done && player2done) {
+        done = true;
+      }
+
       if (done) {
         gameState.score++;
         gameState.waitingForInput = false;
         gameState.timeElapsed = 0;
+        gameState.player1done = false;
+        gameState.player2done = false;
         // MINIMUM TIME HERE:
         if (gameState.score > 5 && gameState.maxTime > 4) {
           gameState.maxTime--;
@@ -274,11 +310,22 @@ function primaryGameLoop() {
           gameState.maxTime--;
         }
       } else {
-        gameState.timeElapsed++;
+        if (!settings.noTimeOut) {
+          gameState.timeElapsed++;
+        }
+        if (player1done && !player2done) {
+          display.update({ state: 'player1done', data: gameState });
+        } else if (player2done && !player1done) {
+          display.update({ state: 'player2done', data: gameState });
+        } else {
+          // This does NOTHING on the LCD.
+          display.update({ state: 'waitingForInput', data: gameState });
+        }
       }
       updateDigitalReadout();
-      display.update({ state: 'waitingForInput', data: gameState });
     } else if (!gameState.waitingForInput && !gameState.gameOver) {
+      // This is where we come up with the NEXT command to request
+
       // Clear all inputs
       for (let i = 0; i < stationList.length; i++) {
         stationList[i].forEach((button) => {
@@ -361,9 +408,11 @@ function primaryGameLoop() {
         }
         if (i === 0) {
           displayNameForStation1 = displayName;
+          gameState.displayNameForStation1 = displayName;
           gameState.requiredKnobPosition1 = knobDirection;
         } else {
           displayNameForStation2 = displayName;
+          gameState.displayNameForStation2 = displayName;
           gameState.requiredKnobPosition2 = knobDirection;
         }
       }
