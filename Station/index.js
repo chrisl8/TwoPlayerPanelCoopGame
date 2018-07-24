@@ -1,5 +1,8 @@
+/* eslint-disable no-param-reassign */
 const five = require('johnny-five');
+const fs = require('fs');
 const { spawn } = require('child_process');
+const json2csv = require('json2csv').parse;
 
 const stationList = require('./stationList');
 const gameState = require('./gameState');
@@ -9,17 +12,9 @@ const display = require('./display');
 
 // webServer();
 
-// Dump Station data
-// for (let i = 0; i < stationList.length; i++) {
-//     stationList[i].forEach(button => {
-//         console.log(`Station ${i} button ${button.id} is ${button.label}.`);
-//     })
-// }
-
 display.initialize();
 
 // Johnny Five section
-// TODO: Set up all Johnny Five devices and set them to update the stationList objects.
 const board = new five.Board({
   port: '/dev/ttyACM0',
   repl: settings.johnnyFiveRepl, // IF you don't want the REPL to display, because maybe you are doing something else on the terminal, turn it off this way.
@@ -159,9 +154,6 @@ function getRandomInt(min, max) {
 }
 
 function getRange(int) {
-  // TODO: Remove or narrow down so it doesn't confuse people when program thinks it is 'down' and user thinks it is 'left/right'
-  // TODO: Might need to set debugging on to test the positions.
-  // TODO: Can you get "in between"?
   const ranges = {
     down: { less: 10, greater: 950 },
     left: { less: 950, greater: 600 },
@@ -220,19 +212,43 @@ function primaryGameLoop() {
     } else if (!gameState.gameStarted) {
       gameState.score = 0;
       display.update({ state: 'notStarted' });
+      gameState.gameStartedTime = Date.now();
       gameState.gameStarted = true;
     } else if (gameState.gameOver) {
       display.update({ state: 'gameOver', data: { score: gameState.score } });
-      if (!gameState.gameOverSoundPlayed) {
+      if (!gameState.gameOverTasksCompleted) {
         spawn('aplay', [`sounds/${settings.gameOverSoundName}.wav`]);
-        gameState.gameOverSoundPlayed = true;
+        gameState.statistics.push({
+          gameStartedTime: gameState.gameStartedTime,
+          station1: gameState.displayNameForStation1,
+          station2: gameState.displayNameForStation2,
+          timeElapsed: gameState.timeElapsed,
+          score: gameState.score,
+          gameEndedTime: Date.now(),
+        });
+        let csv;
+        try {
+          csv = json2csv(gameState.statistics);
+        } catch (err) {
+          console.error(err);
+        }
+        if (csv) {
+          csv = `${csv}\n`;
+          try {
+            fs.appendFileSync('statistics.csv', csv);
+          } catch (err) {
+            console.log(err);
+            /* Handle the error */
+          }
+        }
+        gameState.gameOverTasksCompleted = true;
       }
       if (
         stationList[0][0].currentStatus === 'off' &&
         stationList[1][0].currentStatus === 'off'
       ) {
         gameState.gameOver = false;
-        gameState.gameOverSoundPlayed = false;
+        gameState.gameOverTasksCompleted = false;
         gameState.timeElapsed = 0;
         gameState.maxTime = settings.initialTime;
         gameState.score = 0;
@@ -241,6 +257,7 @@ function primaryGameLoop() {
         gameState.player2done = false;
         gameState.gameStarted = false;
         gameState.atGameIntro = true;
+        gameState.statistics.length = 0;
       }
     } else if (
       gameState.maxTime * (1000 / settings.loopTime) - gameState.timeElapsed <
@@ -311,6 +328,14 @@ function primaryGameLoop() {
 
       if (done) {
         gameState.score++;
+        gameState.statistics.push({
+          gameStartedTime: gameState.gameStartedTime,
+          station1: gameState.displayNameForStation1,
+          station2: gameState.displayNameForStation2,
+          timeElapsed: gameState.timeElapsed,
+          score: gameState.score,
+          gameEndedTime: 0,
+        });
         gameState.waitingForInput = false;
         gameState.timeElapsed = 0;
         gameState.player1done = false;

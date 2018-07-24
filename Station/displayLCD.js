@@ -105,6 +105,12 @@ class DisplayLCD {
               row: 'line2',
               input: `      SUCCESS!`,
             });
+            await lcd.display({
+              portObj: this.portObj,
+              operation: 'text',
+              row: 'line4',
+              input: ` CURRENT SCORE: ${gameState.score}`,
+            });
           }
           break;
         case 'player2done':
@@ -115,6 +121,12 @@ class DisplayLCD {
               operation: 'text',
               row: 'line2',
               input: `      SUCCESS!`,
+            });
+            await lcd.display({
+              portObj: this.portObj,
+              operation: 'text',
+              row: 'line4',
+              input: ` CURRENT SCORE: ${gameState.score}`,
             });
           }
           break;

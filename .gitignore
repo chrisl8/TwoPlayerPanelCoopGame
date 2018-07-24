@@ -62,3 +62,5 @@ typings/
 
 # IntelliJ IDE Project Settings
 .idea/
+
+Station/statistics.csv

@@ -36,5 +36,6 @@ module.exports = {
     'prefer-destructuring': 'off',
     'no-plusplus': 'off',
     'no-restricted-syntax': 'off',
+    'consistent-return': 'off',
   },
 };
