@@ -62,21 +62,26 @@ board.on('ready', () => {
           () => {
             input.hasBeenPressed = true;
             input.currentStatus = 'on';
-            let soundName = '1';
+            let soundName = settings.incorrectSoundName;
             if (input.correct) {
-              soundName = '328120__kianda__powerup';
+              soundName = settings.successSoundName;
               if (input.subType === 'big') {
-                soundName = 'theOneButton';
+                soundName = settings.bigButtonSoundName;
               }
             }
             if (input.subType === 'arm') {
-              soundName = '369867__samsterbirdies__radio-beep';
+              soundName = settings.armingSwitchSoundName;
             }
             if (settings.debug) {
               console.log(`\nStation ${i + 1}`);
               console.log(input);
             }
-            spawn('aplay', [`sounds/${soundName}.wav`]);
+            if (
+              (gameState.gameStarted && !gameState.gameOver) ||
+              input.subType === 'arm'
+            ) {
+              spawn('aplay', [`sounds/${soundName}.wav`]);
+            }
           },
         );
         johnnyFiveObjects[`${i}-${input.type}-${input.subType}-${input.id}`].on(
@@ -90,10 +95,14 @@ board.on('ready', () => {
           () => {
             input.hasBeenPressed = true;
             input.currentStatus = 'off';
-            if (input.type === 'switch') {
-              let soundName = '4';
+            if (
+              input.type === 'switch' &&
+              !gameState.gameOver &&
+              gameState.gameStarted
+            ) {
+              let soundName = settings.incorrectSoundName;
               if (input.correct) {
-                soundName = '328120__kianda__powerup';
+                soundName = settings.successSoundName;
               }
               spawn('aplay', [`sounds/${soundName}.wav`]);
             }
@@ -214,13 +223,18 @@ function primaryGameLoop() {
       gameState.gameStarted = true;
     } else if (gameState.gameOver) {
       display.update({ state: 'gameOver', data: { score: gameState.score } });
+      if (!gameState.gameOverSoundPlayed) {
+        spawn('aplay', [`sounds/${settings.gameOverSoundName}.wav`]);
+        gameState.gameOverSoundPlayed = true;
+      }
       if (
         stationList[0][0].currentStatus === 'off' &&
         stationList[1][0].currentStatus === 'off'
       ) {
         gameState.gameOver = false;
+        gameState.gameOverSoundPlayed = false;
         gameState.timeElapsed = 0;
-        gameState.maxTime = gameState.initialTIme;
+        gameState.maxTime = settings.initialTime;
         gameState.score = 0;
         gameState.waitingForInput = false;
         gameState.player1done = false;
@@ -302,11 +316,15 @@ function primaryGameLoop() {
         gameState.player1done = false;
         gameState.player2done = false;
         // MINIMUM TIME HERE:
-        if (gameState.score > 5 && gameState.maxTime > 4) {
+        if (gameState.score > 10 && gameState.maxTime > 5) {
           gameState.maxTime--;
-        } else if (gameState.score > 10 && gameState.maxTime > 3) {
+        } else if (gameState.score > 20 && gameState.maxTime > 4) {
           gameState.maxTime--;
-        } else if (gameState.score > 20 && gameState.maxTime > 2) {
+        } else if (gameState.score > 30 && gameState.maxTime > 3) {
+          gameState.maxTime--;
+        } else if (gameState.score > 40 && gameState.maxTime > 2) {
+          gameState.maxTime--;
+        } else if (gameState.score > 50 && gameState.maxTime > 1) {
           gameState.maxTime--;
         }
       } else {

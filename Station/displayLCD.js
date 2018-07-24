@@ -2,7 +2,6 @@ const lcd = require('./LCD20x4');
 const wait = require('./wait');
 const formatAndSendToLCD = require('./formatAndSendToLCD');
 const gameState = require('./gameState');
-const stationList = require('./stationList');
 
 class DisplayLCD {
   constructor(port = '/dev/ttyACM1') {

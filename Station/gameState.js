@@ -13,7 +13,6 @@ const gameState = {
   score: 0,
   lastThreeInputs: [0, 0, 0],
   timeElapsed: 0,
-  initialTIme: 10,
   maxTime: 10,
   clockUpdate: 0,
   player1done: false,
