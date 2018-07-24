@@ -11,7 +11,7 @@ const gameState = {
   displayNameForStation1: '',
   displayNameForStation2: '',
   score: 0,
-  lastThreeInputs: [0, 0, 0],
+  recentInputList: [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], // Make this longer or shorter to reject a longer list of recent inputs
   timeElapsed: 0,
   maxTime: 10,
   clockUpdate: 0,

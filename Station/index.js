@@ -352,36 +352,31 @@ function primaryGameLoop() {
         });
       }
 
-      gameState.nextInstructionForSide1 = getRandomInt(
-        1,
-        stationList[0].length - 1,
-      );
-      while (
-        gameState.lastThreeInputs.indexOf(gameState.nextInstructionForSide1) !==
-        -1
-      ) {
+      do {
         gameState.nextInstructionForSide1 = getRandomInt(
           1,
           stationList[0].length - 1,
         );
-      }
-      gameState.lastThreeInputs[0] = gameState.lastThreeInputs[1];
-      gameState.lastThreeInputs[1] = gameState.nextInstructionForSide1;
-
-      gameState.nextInstructionForSide2 = getRandomInt(
-        1,
-        stationList[1].length - 1,
+      } while (
+        gameState.recentInputList[0].indexOf(
+          gameState.nextInstructionForSide1,
+        ) !== -1
       );
-      while (
-        gameState.lastThreeInputs.indexOf(gameState.nextInstructionForSide2) !==
-        -1
-      ) {
+      gameState.recentInputList[0].push(gameState.nextInstructionForSide1);
+      gameState.recentInputList[0].shift();
+
+      do {
         gameState.nextInstructionForSide2 = getRandomInt(
           1,
           stationList[1].length - 1,
         );
-      }
-      gameState.lastThreeInputs[2] = gameState.nextInstructionForSide2;
+      } while (
+        gameState.recentInputList[1].indexOf(
+          gameState.nextInstructionForSide2,
+        ) !== -1
+      );
+      gameState.recentInputList[1].push(gameState.nextInstructionForSide2);
+      gameState.recentInputList[1].shift();
 
       let displayNameForStation1 =
         stationList[0][gameState.nextInstructionForSide1].label;
