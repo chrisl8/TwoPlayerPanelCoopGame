@@ -439,7 +439,7 @@ stationList.push([
     type: 'button',
     subType: 'small',
     label: 'Green Button Left',
-    funName: 'Distrubute Stress Balls',
+    funName: 'Distribute Stress Balls',
     description: 'Green Button Left',
     currentStatus: null,
     hasBeenPressed: false,
