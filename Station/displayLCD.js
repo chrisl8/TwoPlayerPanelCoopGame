@@ -3,6 +3,18 @@ const wait = require('./wait');
 const formatAndSendToLCD = require('./formatAndSendToLCD');
 const gameState = require('./gameState');
 
+function centerLine(text) {
+  if (text.length < 20 - 1) {
+    let spaces = '';
+    while (spaces.length < (20 - text.length) / 2) {
+      spaces = `${spaces} `;
+    }
+    // eslint-disable-next-line no-param-reassign
+    text = `${spaces}${text}`;
+  }
+  return text;
+}
+
 class DisplayLCD {
   constructor(port = '/dev/ttyACM1') {
     this.port = port;
@@ -18,13 +30,13 @@ class DisplayLCD {
           portObj: this.portObj,
           operation: 'text',
           row: 'line2',
-          input: ' Booting Universe,',
+          input: centerLine('Booting Universe,'),
         });
         await lcd.display({
           portObj: this.portObj,
           operation: 'text',
           row: 'line3',
-          input: ' please stand by...',
+          input: centerLine('please stand by...'),
         });
       } catch (e) {
         console.error('LCD Init error:');
@@ -50,23 +62,16 @@ class DisplayLCD {
             portObj: this.portObj,
             operation: 'text',
             row: 'line2',
-            input: '  Arm your station',
+            input: centerLine('Arm your station'),
           });
           await lcd.display({
             portObj: this.portObj,
             operation: 'text',
             row: 'line3',
-            input: '     to begin!',
+            input: centerLine('to begin!'),
           });
           break;
         case 'notStarted':
-          await lcd.display({ portObj: this.portObj, operation: 'clear' });
-          await lcd.display({
-            portObj: this.portObj,
-            operation: 'text',
-            row: 'line2',
-            input: '     Get ready!     ',
-          });
           break;
         case 'gameOver':
           await lcd.display({ portObj: this.portObj, operation: 'clear' });
@@ -74,25 +79,25 @@ class DisplayLCD {
             portObj: this.portObj,
             operation: 'text',
             row: 'line1',
-            input: '     GAME OVER',
+            input: centerLine('GAME OVER'),
           });
           await lcd.display({
             portObj: this.portObj,
             operation: 'text',
             row: 'line2',
-            input: `   YOUR SCORE: ${data.score}`,
+            input: centerLine(`YOUR SCORE: ${data.score}`),
           });
           await lcd.display({
             portObj: this.portObj,
             operation: 'text',
             row: 'line3',
-            input: ' Please DISARM both',
+            input: centerLine('Please DISARM both'),
           });
           await lcd.display({
             portObj: this.portObj,
             operation: 'text',
             row: 'line4',
-            input: ' sides to try again',
+            input: centerLine('sides to try again'),
           });
           // }
           break;
@@ -103,13 +108,13 @@ class DisplayLCD {
               portObj: this.portObj,
               operation: 'text',
               row: 'line2',
-              input: `      SUCCESS!`,
+              input: centerLine('SUCCESS!'),
             });
             await lcd.display({
               portObj: this.portObj,
               operation: 'text',
               row: 'line4',
-              input: ` CURRENT SCORE: ${gameState.score}`,
+              input: centerLine(`CURRENT SCORE: ${gameState.score}`),
             });
           }
           break;
@@ -120,13 +125,13 @@ class DisplayLCD {
               portObj: this.portObj,
               operation: 'text',
               row: 'line2',
-              input: `      SUCCESS!`,
+              input: centerLine('SUCCESS!'),
             });
             await lcd.display({
               portObj: this.portObj,
               operation: 'text',
               row: 'line4',
-              input: ` CURRENT SCORE: ${gameState.score}`,
+              input: centerLine(`CURRENT SCORE: ${gameState.score}`),
             });
           }
           break;
