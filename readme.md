@@ -1,4 +1,4 @@
-# Two Player Coop Panel
+# Panic Stations
 
 This is the code for our Two Player Coop Panel project. It is based on the "Push The Button" game built and coded for the 2018 Winter ICT Game Jam. That code can be seen at the [ictGameJamWinter2018](https://github.com/chrisl8/ictGameJamWinter2018) repository.
 
@@ -20,7 +20,7 @@ These instructions will get you a copy of the project up and running on your loc
 To install, simply clone the repository into a local folder
 
 ```
-$ git clone https://github.com/chrisl8/TwoPlayerPanelCoopGame.git
+$ git clone https://github.com/chrisl8/PanicStations.git
 ```
 
 ### Prerequisites
@@ -36,7 +36,7 @@ I wasn't able to make any of the automated programs written work,
 so I did this:
 
 1. Open up the Arduino program.
-2. Open the file `TwoPlayerPanelCoopGame/Station/node_modules/node-pixel/firmware/build/node_pixel_firmata/node_pixel_firmata.ino` from the node_modules folder.
+2. Open the file `PanicStations/Station/node_modules/node-pixel/firmware/build/node_pixel_firmata/node_pixel_firmata.ino` from the node_modules folder.
 3. Upload it to the Arduino like any program.
 
 If you just have the normal Firmata on the board instead of the special node_pixel version, you will get this error:
@@ -91,4 +91,4 @@ Switches: 32-53
 Small Buttons: 2-5, 8-13, 22-31
 
 Adding to crontab on pi
-`@reboot ${HOME}/TwoPlayerPanelCoopGame/startGame.sh --service > ${HOME}/crontab.log 2>&1`
+`@reboot ${HOME}/PanicStations/startGame.sh --service > ${HOME}/crontab.log 2>&1`
