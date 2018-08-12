@@ -3,6 +3,7 @@ const settings = {
   useScreen: false,
   useLCD: true,
   debug: false, // Use this to see input on screen
+  runWithoutArduino: false, // Use for debugging, otherwise always false
   potChangeThreshold: 25,
   station1port: '/dev/ttyACM1', // TODO: Can we detect these? Can we allow fixing from panel?
   station2port: '/dev/ttyACM2',

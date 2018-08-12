@@ -6,6 +6,10 @@ const gameState = {
   waitingForInput: false,
   nextInstructionForSide1: 1,
   nextInstructionForSide2: 1,
+  totalStationCount: 2, // A typical TARDIS would have 5, or 4 if one station is used for, say a computer running Spotify.
+  stationsArmed: 2, // TODO: Make this variable, either by menu, or setting up a way to start game play without arming all stations.
+  stationsInPlay: [], // Hold station data
+  instructionsForStations: [],
   requiredKnobPosition1: null,
   requiredKnobPosition2: null,
   displayNameForStation1: '',
