@@ -63,4 +63,8 @@ typings/
 # IntelliJ IDE Project Settings
 .idea/
 
-Station/statistics.csv
+# VSCode IDE Project Settings
+.vscode/
+
+node/statistics.csv
+node/sounds/copyrighted/

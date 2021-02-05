@@ -1,4 +1,5 @@
 const gameState = {
+  initCalled: false,
   atGameIntro: true,
   gameStarted: false,
   gameOver: false,

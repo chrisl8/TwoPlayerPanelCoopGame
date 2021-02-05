@@ -1,7 +1,6 @@
-/* eslint-disable no-param-reassign */
+/* eslint-disable no-param-reassign, func-names */
 const five = require('johnny-five');
 const fs = require('fs');
-const { spawn } = require('child_process');
 const json2csv = require('json2csv').parse;
 
 const stationList = require('./stationList');
@@ -9,141 +8,212 @@ const gameState = require('./gameState');
 const settings = require('./settings');
 // const webServer = require('./webServer');
 const display = require('./display');
-
-// webServer();
-
-display.initialize();
+const playSound = require('./playSound');
+const Pixels = require('./Pixels');
 
 const johnnyFiveObjects = {};
+const pixels = new Pixels();
 
-if (settings.runWithoutArduino) {
-  gameState.boardInitiated = true;
-} else {
-  const board = new five.Board({
-    port: '/dev/ttyACM0',
-    repl: settings.johnnyFiveRepl, // IF you don't want the REPL to display, because maybe you are doing something else on the terminal, turn it off this way.
-    debug: settings.johnnyFiveDebug, // Same for the "debug" messages like board Found and Connected.
-  });
-  // http://johnny-five.io/api/button/
-  board.on('ready', () => {
-    // TODO: If we name the FILE we load to each Arduino differently,
-    // then we can use THIS below to differentiate them, regardless of what port each is plugged in to or initializes first.
-    // https://stackoverflow.com/a/34713418/4982408
-    // console.log(board.io.firmware.name);
-    // TODO: Do we need the node-pixel firmata on both boards?
+function init() {
+  // webServer();
 
-    johnnyFiveObjects.digitalReadout2 = new five.Led.Digits({
-      controller: 'HT16K33',
+  // TODO: Starting this should be configurable.
+  // pixels.init(); // TODO: These are not working yet.
+  // TODO: See the Pixels.js run from command line for how to operate the pixels
+
+  if (settings.runWithoutArduino) {
+    gameState.boardInitiated = true;
+  } else {
+    const board = new five.Board({
+      port: settings.primaryJohnnyFiveArduinoPort.name,
+      repl: settings.johnnyFiveRepl, // IF you don't want the REPL to display, because maybe you are doing something else on the terminal, turn it off this way.
+      debug: settings.johnnyFiveDebug, // Same for the "debug" messages like board Found and Connected.
     });
-    johnnyFiveObjects.digitalReadout1 = new five.Led.Digits({
-      controller: 'HT16K33',
-    });
+    // http://johnny-five.io/api/button/
+    board.on('ready', () => {
+      // NOTE: If we name the FILE we load to each Arduino differently,
+      // then we can use THIS below to differentiate them, regardless of what port each is plugged in to or initializes first.
+      // https://stackoverflow.com/a/34713418/4982408
+      // console.log(board.io.firmware.name);
+      // For now though using the board serial number to get the port is working fine.
 
-    for (let i = 0; i < stationList.length; i++) {
-      stationList[i].forEach((input) => {
-        if (['switch', 'button'].indexOf(input.type) !== -1) {
-          let isPullup = true;
-          if (input.subType === 'arm') {
-            isPullup = false;
+      // TODO: Do we need to update/replace the firmata on either board?
+
+      johnnyFiveObjects.digitalReadout2 = new five.Led.Digits({
+        controller: 'HT16K33',
+      });
+      johnnyFiveObjects.digitalReadout1 = new five.Led.Digits({
+        controller: 'HT16K33',
+      });
+
+      // Volume Knob
+      johnnyFiveObjects.volumeKnob = new five.Sensor({
+        pin: settings.volume.knob.pin,
+        threshold: settings.volume.knob.potChangeThreshold, // This will emit a 'change' if it changes by this much.
+        // freq: 250 // This will emit data every x milliseconds, even if no change has occurred.
+      });
+      johnnyFiveObjects.volumeKnob.on('change', function () {
+        // Do NOT make this an arrow function!
+        // this.value must reference the this that called it!
+        // Remember knob works in reverse.
+        if (this.value < settings.volume.knob.maximum) {
+          settings.volume.setting = settings.volume.maximum;
+        } else if (this.value > settings.volume.knob.minimum) {
+          settings.volume.setting = settings.volume.zero;
+        } else {
+          const OldRange =
+            settings.volume.knob.maximum - settings.volume.knob.minimum;
+          if (OldRange === 0) settings.volume.setting = settings.volume.minimum;
+          else {
+            const NewRange = settings.volume.maximum - settings.volume.minimum;
+            settings.volume.setting = Math.round(
+              ((this.value - settings.volume.knob.minimum) * NewRange) /
+                OldRange +
+                settings.volume.minimum,
+            );
           }
-          johnnyFiveObjects[
-            `${i}-${input.type}-${input.subType}-${input.id}`
-          ] = new five.Button({
-            pin: input.pin,
-            isPullup,
-          });
-          johnnyFiveObjects[
-            `${i}-${input.type}-${input.subType}-${input.id}`
-          ].on('press', () => {
-            input.hasBeenPressed = true;
-            input.currentStatus = 'on';
-            let soundName = settings.incorrectSoundName;
-            if (input.correct) {
-              soundName = settings.successSoundName;
-              if (input.subType === 'big') {
-                soundName = settings.bigButtonSoundName;
-              }
-            }
-            if (input.subType === 'arm') {
-              soundName = settings.armingSwitchSoundName;
-            }
-            if (settings.debug) {
-              console.log(`\nStation ${i + 1}`);
-              console.log(input);
-            }
-            if (
-              (gameState.gameStarted && !gameState.gameOver) ||
-              input.subType === 'arm'
-            ) {
-              spawn('aplay', [`sounds/${soundName}.wav`]);
-            }
-          });
-          johnnyFiveObjects[
-            `${i}-${input.type}-${input.subType}-${input.id}`
-          ].on('hold', () => {
-            input.currentStatus = 'on';
-          });
-          johnnyFiveObjects[
-            `${i}-${input.type}-${input.subType}-${input.id}`
-          ].on('release', () => {
-            input.hasBeenPressed = true;
-            input.currentStatus = 'off';
-            if (
-              input.type === 'switch' &&
-              !gameState.gameOver &&
-              gameState.gameStarted
-            ) {
-              let soundName = settings.incorrectSoundName;
-              if (input.correct) {
-                soundName = settings.successSoundName;
-              }
-              spawn('aplay', [`sounds/${soundName}.wav`]);
-            }
-          });
-        } else if (input.type === 'knob') {
-          johnnyFiveObjects[
-            `${i}-${input.type}-${input.subType}-${input.id}`
-          ] = new five.Sensor({
-            pin: input.pin,
-            threshold: settings.potChangeThreshold, // This will emit a 'change' if it changes by this much.
-            // freq: 250 // This will emit data every x milliseconds, even if no change has occured.
-          });
-
-          // Inject the `sensor` hardware into
-          // the Repl instance's context;
-          // allows direct command line access
-          // board.repl.inject({
-          //     pot: potentiometer
-          // });
-
-          // "data" get the current reading from the potentiometer
-          /*
-                potentiometer.on("data", function() {
-                  console.log(this.value, this.raw);
-                });
-                */
-
-          johnnyFiveObjects[
-            `${i}-${input.type}-${input.subType}-${input.id}`
-          ].on('change', function() {
-            input.hasBeenPressed = true;
-            input.currentStatus = this.value;
-            if (settings.debug) {
-              console.log(`\nStation ${i + 1}`);
-              console.log(input);
-            }
-            // console.log(input);
-          });
         }
         if (settings.debug) {
-          // This prints out all button/switch labels at the start of the program.
-          console.log(`Station ${i} input ${input.id} is ${input.label}.`);
+          console.log(
+            `\nVolume Knob (${settings.volume.knob.pin}): ${this.value} - Volume: ${settings.volume.setting}`,
+          );
         }
       });
-    }
 
-    gameState.boardInitiated = true;
-  });
+      for (let i = 0; i < stationList.length; i++) {
+        stationList[i].forEach((input) => {
+          if (['switch', 'button'].indexOf(input.type) !== -1) {
+            let isPullup = true;
+            if (input.subType === 'arm') {
+              isPullup = false;
+            }
+            johnnyFiveObjects[
+              `${i}-${input.type}-${input.subType}-${input.id}`
+            ] = new five.Button({
+              pin: input.pin,
+              isPullup,
+            });
+            johnnyFiveObjects[
+              `${i}-${input.type}-${input.subType}-${input.id}`
+            ].on('press', () => {
+              input.hasBeenPressed = true;
+              const previousStatus = input.currentStatus;
+              input.currentStatus = 'on';
+              let soundName = settings.soundFilenames.incorrect;
+              if (input.correct) {
+                soundName = settings.soundFilenames.success;
+                if (input.subType === 'big') {
+                  soundName = settings.soundFilenames.bigButton;
+                }
+              }
+              if (input.subType === 'arm') {
+                soundName = settings.soundFilenames.armingSwitch;
+              }
+              if (settings.debug) {
+                console.log(`\nStation ${i + 1}`);
+                console.log(input);
+              }
+              if (
+                (gameState.gameStarted && !gameState.gameOver) ||
+                input.subType === 'arm'
+              ) {
+                playSound(soundName);
+              } else if (input.currentStatus !== previousStatus) {
+                // Switches tend to throw a lot of "on" status all at once and repeat the sound,
+                // so the check against previousStatus fixes that.
+                // TODO: Actually, I'm not sure that is true. The sound may just repeat in the wav file xD  Maybe undor this if that isn't the case.
+
+                // Play random sound when game isn't running.
+                // TODO: Improve on this and/or make a function.
+                // It would be better if the same button played the same sound,
+                // each time.
+                // Add an "idleSound" key to each stationList object, and use that sound name,
+                // or if it doesn't exist on an entry, then go for "random".
+                let randomSound = settings.soundFilenames.random[1];
+                if (input.type === 'button') {
+                  randomSound = settings.soundFilenames.random[0];
+                }
+                // const randomSound =
+                //   settings.soundFilenames.random[
+                //     Math.floor(
+                //       Math.random() * settings.soundFilenames.random.length,
+                //     )
+                //   ];
+                if (settings.debug) {
+                  console.log(`Random Sound: ${randomSound}`);
+                }
+                playSound(randomSound);
+              }
+            });
+            johnnyFiveObjects[
+              `${i}-${input.type}-${input.subType}-${input.id}`
+            ].on('hold', () => {
+              input.currentStatus = 'on';
+            });
+            johnnyFiveObjects[
+              `${i}-${input.type}-${input.subType}-${input.id}`
+            ].on('release', () => {
+              input.hasBeenPressed = true;
+              input.currentStatus = 'off';
+              if (
+                input.type === 'switch' &&
+                !gameState.gameOver &&
+                gameState.gameStarted
+              ) {
+                let soundName = settings.soundFilenames.incorrect;
+                if (input.correct) {
+                  soundName = settings.soundFilenames.success;
+                }
+                playSound(soundName);
+              }
+            });
+          } else if (input.type === 'knob') {
+            johnnyFiveObjects[
+              `${i}-${input.type}-${input.subType}-${input.id}`
+            ] = new five.Sensor({
+              pin: input.pin,
+              threshold: settings.potChangeThreshold, // This will emit a 'change' if it changes by this much.
+              // freq: 250 // This will emit data every x milliseconds, even if no change has occurred.
+            });
+
+            // Inject the `sensor` hardware into
+            // the Repl instance's context;
+            // allows direct command line access
+            // board.repl.inject({
+            //     pot: potentiometer
+            // });
+
+            // "data" get the current reading from the potentiometer
+            /*
+                  potentiometer.on("data", function() {
+                    console.log(this.value, this.raw);
+                  });
+                  */
+
+            johnnyFiveObjects[
+              `${i}-${input.type}-${input.subType}-${input.id}`
+            ].on('change', function () {
+              // Do NOT make this an arrow function!
+              // this.value must reference the this that called it!
+              input.hasBeenPressed = true;
+              input.currentStatus = this.value;
+              if (settings.debug) {
+                console.log(`\nStation ${i + 1}`);
+                console.log(input);
+              }
+              // console.log(input);
+            });
+          }
+          if (settings.debug) {
+            // This prints out all button/switch labels at the start of the program.
+            console.log(`Station ${i} input ${input.id} is ${input.label}.`);
+          }
+        });
+      }
+
+      gameState.boardInitiated = true;
+    });
+  }
 }
 
 function getRandomInt(min, max) {
@@ -158,12 +228,15 @@ function getRange(int) {
     right: { less: 300, greater: 10 },
   };
   for (const vector in ranges) {
-    if (int < ranges[vector].less && int > ranges[vector].greater) {
-      // we found the right one
-      return vector;
-    } else if (ranges[vector].less < ranges[vector].greater) {
-      if (int < ranges[vector].less || int > ranges[vector].greater) {
+    if (Object.prototype.hasOwnProperty.call(ranges, vector)) {
+      if (int < ranges[vector].less && int > ranges[vector].greater) {
+        // we found the right one
         return vector;
+      }
+      if (ranges[vector].less < ranges[vector].greater) {
+        if (int < ranges[vector].less || int > ranges[vector].greater) {
+          return vector;
+        }
       }
     }
   }
@@ -211,6 +284,10 @@ function updateDigitalReadout() {
 }
 
 function primaryGameLoop() {
+  if (!gameState.initCalled) {
+    gameState.initCalled = true;
+    init();
+  }
   if (gameState.boardInitiated) {
     if (gameState.atGameIntro) {
       updateDigitalReadout();
@@ -229,7 +306,7 @@ function primaryGameLoop() {
     } else if (gameState.gameOver) {
       display.update({ state: 'gameOver', data: { score: gameState.score } });
       if (!gameState.gameOverTasksCompleted) {
-        spawn('aplay', [`sounds/${settings.gameOverSoundName}.wav`]);
+        playSound(settings.soundFilenames.gameOver);
         gameState.statistics.push({
           gameStartedTime: gameState.gameStartedTime,
           station1: gameState.displayNameForStation1,
@@ -319,7 +396,7 @@ function primaryGameLoop() {
       if (player1done !== gameState.player1done) {
         gameState.player1done = player1done;
         if (player1done) {
-          spawn('aplay', [`sounds/${settings.successSoundName}.wav`]);
+          playSound(settings.soundFilenames.success);
         } else {
           // Display command again if the "player done" goes from true to false again.
           display.update({ state: 'generatingNextCommand' });
@@ -329,7 +406,7 @@ function primaryGameLoop() {
       if (player2done !== gameState.player2done) {
         gameState.player2done = player2done;
         if (player2done) {
-          spawn('aplay', [`sounds/${settings.successSoundName}.wav`]);
+          playSound(settings.soundFilenames.success);
         } else {
           // Display command again if the "player done" goes from true to false again.
           display.update({ state: 'generatingNextCommand' });
@@ -484,4 +561,4 @@ function primaryGameLoop() {
   setTimeout(primaryGameLoop, settings.loopTime);
 }
 
-primaryGameLoop();
+module.exports = primaryGameLoop;

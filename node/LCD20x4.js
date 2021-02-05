@@ -1,6 +1,6 @@
 const process = require('process');
-const UsbDevice = require('./UsbDevice.js');
 const SerialPort = require('serialport');
+const UsbDevice = require('./UsbDevice.js');
 const wait = require('./wait');
 
 let working = false; // Prevent multiple instances from running at once in the same program

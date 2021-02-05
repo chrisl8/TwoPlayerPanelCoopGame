@@ -13,7 +13,7 @@ stationList.push([
   },
   {
     id: 2,
-    pin: 54 + 12,
+    pin: 54 + 12, // Analog as digital, add one past last pin number plus Analog pin number
     type: 'button',
     subType: 'big',
     label: 'Big Blue Button',

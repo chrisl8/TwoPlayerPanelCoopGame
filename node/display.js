@@ -10,8 +10,8 @@ function initialize() {
     screen.initialize();
   }
   if (settings.useLCD) {
-    lcd1 = new DisplayLCD(settings.station1port);
-    lcd2 = new DisplayLCD(settings.station2port);
+    lcd1 = new DisplayLCD(settings.stationOneLcdPort.name);
+    lcd2 = new DisplayLCD(settings.stationTwoLcdPort.name);
     lcd1.initialize();
     lcd2.initialize();
   }

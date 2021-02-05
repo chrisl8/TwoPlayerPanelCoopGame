@@ -18,6 +18,7 @@ module.exports = {
   env: {
     es6: true, // Probably not needed, because of babel-eslint
     node: true, // Probably not needed, because of babel-eslint
+    jest: true,
   },
   rules: {
     'prettier/prettier': 'error',
@@ -36,6 +37,5 @@ module.exports = {
     'prefer-destructuring': 'off',
     'no-plusplus': 'off',
     'no-restricted-syntax': 'off',
-    'consistent-return': 'off',
   },
 };

@@ -3,7 +3,8 @@
     {
       "name": "Panic Stations",
       "script": "index.js",
-      "restart_delay": 1000
+      "restart_delay": 1000,
+      "watch": false
     }
   ]
 }
